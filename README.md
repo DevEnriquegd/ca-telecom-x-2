@@ -25,29 +25,50 @@ Se implementó un pipeline estructurado bajo el criterio de **maximización del 
 ---
 
 ## 🛠️ 3. Tecnologías Utilizadas
-| Librería | Propósito |
-| :--- | :--- |
-| **pandas / numpy** | Manipulación y Feature Engineering. |
-| **scikit-learn** | Pipeline de ML, métricas y validación cruzada. |
-| **XGBoost** | Modelo de boosting de gradiente para comparación de rendimiento. |
-| **imblearn** | Balanceo de clases (SMOTE, Undersampling). |
-| **pickle** | Serialización del modelo "Champion". |
+
+| Categoría | Herramientas / Librerías | Propósito Específico |
+| :--- | :--- | :--- |
+| **Lenguaje** | `Python 3.x` | Base del desarrollo del proyecto. |
+| **Análisis de Datos** | `pandas`, `numpy` | Manipulación de DataFrames y operaciones vectoriales. |
+| **Visualización** | `matplotlib`, `seaborn` | Gráficos estadísticos y visualización de importancia de variables. |
+| **Preprocesamiento** | `OneHotEncoder`, `ColumnTransformer` | Codificación de variables categóricas y transformación modular. |
+| **Modelado (Core)** | `Scikit-learn`, `XGBoost`, `SVM` | Entrenamiento de modelos de clasificación y ensambles. |
+| **Pipeline y Flujo** | `sklearn.pipeline.Pipeline` | Automatización de la cadena de transformación y predicción. |
+| **Validación Avanzada** | `StratifiedKFold`, `cross_val_score` | Validación cruzada robusta para asegurar la estabilidad. |
+| **Balanceo de Clases** | `SMOTE`, `RandomUnderSampler` | Mitigación del sesgo de clases mediante sobre/submuestreo. |
+| **Persistencia** | `pickle` | Exportación y serialización del modelo "Champion". |
 
 ---
 
-## 📊 4. Evaluación de Modelos y Resultados Finales
-Se priorizó el **Recall** (Sensibilidad) para minimizar los Falsos Negativos, dado que el costo de perder un cliente es superior al de una campaña de retención.
+## 📊 4. Evaluación de Experimentos y Resultados
 
-### Comparativa de Validación Cruzada (K-Folds)
-| Modelo | Recall Promedio | Estabilidad (STD) | F1-Score |
-| :--- | :---: | :---: | :---: |
-| **Random Forest + Under** | **79.28%** | **±0.019** | **0.63** |
-| SVM + Undersampling | 79.20% | ±0.007 | 0.62 |
-| XGBoost + Undersampling | 75.61% | ±0.024 | 0.61 |
-| KNN + SMOTE | 72.17% | ±0.026 | 0.55 |
+Para seleccionar la mejor estrategia, se realizó una comparativa inicial evaluando el rendimiento puntual de los modelos combinados con técnicas de balanceo (SMOTE y Undersampling).
 
-**🏆 Champion Model:** `Random Forest + Undersampling`. 
-Este modelo logra capturar aproximadamente el **80% de las cancelaciones reales**, manteniendo un equilibrio óptimo entre precisión y sensibilidad.
+### A. Resultados de la Fase de Experimentación (Hold-out)
+En esta fase se midió el impacto directo del balanceo en la matriz de confusión y métricas clave:
+
+| Modelo + Estrategia | TP | TN | FN | FP | Recall | Precision | ROC-AUC |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **RandomForest + SMOTE** | 457 | 1098 | 104 | 454 | **81.46%** | 50.16% | 0.834 |
+| **RandomForest + Under** | 454 | 1101 | 107 | 451 | **80.93%** | 50.17% | 0.836 |
+| XGBoost + Under | 451 | 1105 | 110 | 447 | 80.39% | 50.22% | 0.831 |
+| SVM + Under | 438 | 1116 | 123 | 436 | 78.07% | 50.11% | 0.819 |
+| XGBoost + SMOTE | 437 | 1123 | 124 | 429 | 77.90% | 50.46% | 0.831 |
+| SVM + SMOTE | 428 | 1126 | 133 | 426 | 76.29% | 50.12% | 0.822 |
+| KNN + Under | 332 | 1259 | 229 | 293 | 59.18% | 53.12% | 0.783 |
+| KNN + SMOTE | 142 | 1430 | 419 | 122 | 25.31% | 53.79% | 0.754 |
+
+
+### B. Validación Cruzada (La Prueba de Consistencia)
+Debido a la cercanía en los resultados entre SMOTE y Undersampling para Random Forest, se aplicó **Stratified K-Fold** para determinar cuál técnica era más estable ante diferentes particiones de datos:
+
+| Modelo (K-Folds) | Recall Promedio | Estabilidad (STD) | F1-Score | Estado |
+| :--- | :--- | :--- | :--- | :--- |
+| **Random Forest + Under** | **79.28%** | **±0.019** | **0.63** | **CHAMPION** |
+| SVM + Under | 79.20% | ±0.007 | 0.62 | Finalista |
+| KNN + SMOTE | 72.17% | ±0.026 | 0.55 | Descartado |
+
+**Análisis de Selección:** Aunque SMOTE alcanzó un pico de Recall del 81.46% en la prueba inicial, el **Undersampling** demostró una mayor robustez y un mejor F1-Score general en la validación cruzada, lo que lo convierte en la opción más fiable para producción.
 
 ---
 
@@ -71,10 +92,18 @@ Basado en el atributo `feature_importances_` del modelo ganador:
 1.  Instalar dependencias: `pip install -r requirements.txt`
 2.  Ejecutar el notebook: `telecom_x_parte2.ipynb`
 3.  Cargar el modelo exportado:
+
 ```python
 import pickle
-# El archivo exportado contiene un diccionario con el modelo y los nombres de las features
+
+# Cargar el diccionario que contiene el modelo y metadatos
 with open('champion.pkl', 'rb') as f:
     data = pickle.load(f)
-    model = data['model']
+
+# Acceder a los componentes
+model = data['model']
+features = data['features']
 ```
+
+## 🤝 8. Autoría
+Proyecto desarrollado por Enrique como Analista Junior de Machine Learning para el desafío Telecom X.
